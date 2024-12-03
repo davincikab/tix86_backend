@@ -11,6 +11,7 @@ const authenticate = async (req, res, next) => {
     }
 
     try {
+        console.log("Token validation")
         // check if is blacklisted
         let token = accessToken.split(" ")[1];
         let istokenBlackListed = await BlackListToken.findOne({ where : { token }});

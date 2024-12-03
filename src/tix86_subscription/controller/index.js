@@ -135,8 +135,6 @@ exports.activateSubscriptionByCouponCode = async(req, res) => {
                 return res.status(500).send({error:"Code has expired "});
             }
 
-            
-
             // update subscription
             let user_subscription = await Subscription.findOne({ where: { userId }});
             let currentDate = new Date().getDate();
@@ -144,6 +142,7 @@ exports.activateSubscriptionByCouponCode = async(req, res) => {
 
             let subscription = await user_subscription.update({
                 is_active:true, 
+                subscription_id:code,
                 subscription_date:new Date().toISOString(), 
                 expires_on:new Date(expiryDate).toISOString(),
             });
@@ -162,3 +161,19 @@ exports.activateSubscriptionByCouponCode = async(req, res) => {
 
 // pass promo code
 // update subscription info
+exports.processSubscriptionPayment = async(req,res) => {
+    try {
+        let info = req.body;
+        let subscription = await Subscription.findOne({ 
+            where: {userId:info.userId}
+        });
+
+        // update subscription details
+        await subscription.update({...info});
+
+        return res.status(200).send("success");
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send({ message: error.message})
+    }
+}

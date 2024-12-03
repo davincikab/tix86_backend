@@ -1,5 +1,6 @@
 const express = require('express');
 const expressip = require('express-ip');
+const path = require('path');
 const { authRouter, userRouter, otpRouter } = require('./src/users/routes');
 
 const tixRouter = require("./src/tix86_subscription/routes");
@@ -37,7 +38,7 @@ app.use((req, res, next) => {
   next();
 });
 
-
+app.use(express.static(path.join(__dirname, './dist')));
 app.get("/", (req, res) => {
   res.send("Server running");
 });

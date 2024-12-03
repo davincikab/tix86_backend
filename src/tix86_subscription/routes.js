@@ -19,4 +19,5 @@ router.post("/coupon_codes/add", authenticate, validate([checkSchema(couponcodeV
 router.delete("/coupon_codes/delete/:code", authenticate, controller.deleteCouponCodes);
 router.post("/activate_subscription_by_couponcode", authenticate, validate([validateCouponCode]), controller.activateSubscriptionByCouponCode)
 
+router.post("/process_subscription_payment", authenticate, controller.processSubscriptionPayment)
 module.exports = router;
