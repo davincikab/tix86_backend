@@ -2,7 +2,6 @@ const nodemailer = require('nodemailer');
 require("dotenv").config();
 
 const mailSender = async (email, title, body) => {
-  console.log("Body Mail")
   try {
     // Create a Transporter to send emails
     let transporter = nodemailer.createTransport({

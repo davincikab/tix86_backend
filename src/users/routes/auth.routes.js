@@ -36,4 +36,17 @@ router.post(
     authController.change_password
 );
 
+router.post(
+    '/send_password_reset_link', 
+    authController.send_reset_password_link
+);
+
+
+http://localhost:3000/b8769ed67a249268fe20cd91ebcaa02c7611d3af
+router.post(
+    '/reset_password/:token', 
+    validate([validateConfirmPassword]), 
+    authController.reset_password
+);
+
 module.exports = router;

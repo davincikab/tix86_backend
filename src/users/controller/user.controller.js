@@ -33,3 +33,22 @@ exports.update_user_info = async(req, res) => {
         res.status(500).send({ message: error.message });
     }
 }
+
+exports.get_customers = async (req, res) => {
+    try {
+        let { search } = req.query;
+         // where:{ email },
+        let customers = await User.findAll({ 
+            attributes:['id', 'email', 'phone_number','is_verified', 'is_subscribed', 'notification_disabled'],
+            include: [
+                { model: Streets, as: 'streets' },
+                { model: Role, as: 'roles' },
+                { model: Subscription, as:'subscription'}
+            ]
+        });
+
+        res.status(200).send({customers});
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+}

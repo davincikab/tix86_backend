@@ -1,7 +1,10 @@
-const { User, OTP, Role, BlackListToken } = require("../models/index");
+const { User, OTP, Role, BlackListToken, Token } = require("../models/index");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { sendOTP, verfify_otp } = require("./otp.controller");
+const { Subscription } = require("../../tix86_subscription/models");
+const sendPasswordResetLink = require("../utils/send_password_reset_email");
+const crypto = require("crypto");
 
 require('dotenv').config();
 
@@ -45,7 +48,6 @@ exports.signup = async (req, res) => {
 
 exports.registration_verification = async (req, res) => {
     try {
-        console.log("Verify");
         let { email, otp_code} = req.body;
         const user = await User.findOne({ where:{ email }});
 
@@ -56,7 +58,16 @@ exports.registration_verification = async (req, res) => {
         try {
             console.log("Verify Code");
             let verified_user = await verfify_otp({email, otp_code});
-            if (!verified_user) return res.status(400).send({message: 'OTP is invalid'})
+            if (!verified_user) return res.status(400).send({message: 'OTP is invalid'});
+
+
+            // add a subscription entry
+            // await Subscription.create({
+            //     userId:verified_user.id, 
+            //     email_notification:false,
+            //     is_active:false,
+            //     text_notification:false
+            // })
 
             const result = verified_user;
 
@@ -79,7 +90,14 @@ exports.registration_verification = async (req, res) => {
 exports.signin = async (req, res) => {
     try {
         let { username, password, identifier='email' } =  req.body;
-        let user = await User.findOne({ where: { [identifier]:username }});
+        let user = await User.findOne({ 
+            where: {
+                [identifier]:username 
+            },
+            include:[
+                { model: Role, as: 'roles' },
+            ]
+        });
 
          // check if user exists
         if(!user) {
@@ -100,7 +118,8 @@ exports.signin = async (req, res) => {
             email:userData.email,
             phone_number:userData.phone_number,
             is_subscribed:userData.is_subscribed,
-            is_verified:userData.is_verified
+            is_verified:userData.is_verified,
+            roles:userData.roles
         };
 
         let accessToken = jwt.sign({user:userInfo}, process.env.SECRET_KEY, {expiresIn:'1h'});
@@ -108,6 +127,7 @@ exports.signin = async (req, res) => {
 
         res.send({user:userInfo, accessToken, refreshToken});
     } catch (error) {
+        console.log(error);
         return res.status(500).json({ 
             success: false, 
             error: error.message 
@@ -161,18 +181,71 @@ exports.logout = async(req, res) => {
 exports.send_reset_password_link = async (req, res) => {
     try {
         // get user email
-        let 
+        let { email } = req.body;
+        let user = await User.findOne({ where:{ email }});
+
+        if(!user) {
+            return res.status(500).send("Email not found");
+        }
+
         // generate token
+        let token = crypto.randomBytes(20).toString('hex');
+        let resetLink = `${process.env.SITE_DOMAIN}/reset_password/${token}`;
+        console.log(resetLink);
+
         // send mail
+        let mailResponse = await sendPasswordResetLink(email, resetLink);
+        await Token.create({ 
+            userId:user.id, 
+            token,
+            expires_on:new Date(new Date().setMinutes(new Date().getMinutes() + 30)).toISOString()
+        });
+
+        res.status(200).send("Check your email for password reset instructions.");
     } catch (error) {
         res.status(500).send({ message: error.message });
     }
 }
 
 exports.reset_password = async (req, res) => {
-    // get token
-    // verify token
-    // update password
+    let { token } = req.params;
+    let { password } = req.body;
+
+    try {
+        // get token
+        let tokenEntry = await Token.findOne({ where : { token }});
+
+        if(!tokenEntry) {
+            return res.status(500).send('Invalid or expired token');
+        } 
+        
+        if (new Date(tokenEntry.expires_on).valueOf() < new Date().valueOf()) {
+            return res.status(500).send('Invalid or expired token');
+        }
+
+    
+        // update password
+        let user = await User.findOne({ where : { id: tokenEntry.userId }});
+        let hashedPassword;
+        try {
+            hashedPassword = await bcrypt.hash(password, 10);
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: `Hashing password error for ${password}: ` + error.message,
+            });
+        }
+
+        await user.update({ password: hashedPassword });
+
+        // destroy the token
+        await tokenEntry.destroy();
+
+        return res.status(200).send('Password updated successfully');
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+    
 }
 
 // change password

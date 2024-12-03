@@ -2,7 +2,7 @@ const express = require('express');
 const controller = require('./controller/index');
 
 const { authenticate } = require('../../middlewares/authenticate');
-const { validate, couponcodeValidator } = require('../../middlewares/validateSchema');
+const { validate, couponcodeValidator, validateCouponCode } = require('../../middlewares/validateSchema');
 const { checkSchema } = require('express-validator');
 const router = express.Router();
 
@@ -17,6 +17,6 @@ router.get("/coupon_codes_filter", authenticate, controller.getCouponCodesByCode
 
 router.post("/coupon_codes/add", authenticate, validate([checkSchema(couponcodeValidator)]), controller.addCouponCodes);
 router.delete("/coupon_codes/delete/:code", authenticate, controller.deleteCouponCodes);
-
+router.post("/activate_subscription_by_couponcode", authenticate, validate([validateCouponCode]), controller.activateSubscriptionByCouponCode)
 
 module.exports = router;

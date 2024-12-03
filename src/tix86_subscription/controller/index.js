@@ -19,7 +19,7 @@ exports.update_streets = async(req, res) => {
                 'dl2_day':street.dl2_day, 
                 'dl2_time':street.dl2_time, 
                 'address':street.name, 
-                'bounds':JSON.stringify(street.bounds)
+                'bounds':street.bounds instanceof Array ? JSON.stringify(street.bounds) : street.bounds
             }
         })
 
@@ -35,11 +35,11 @@ exports.update_streets = async(req, res) => {
 exports.update_subscription = async(req, res) => {
     try {
         // console.log(req.body);
-        let {  text_notification, email_notification, twelve_hours, one_hour, user } = req.body;
-        
+        let { text_notification, email_notification, twelve_hours, one_hour, user } = req.body;
         let subscription = await Subscription.findOne({ where: {userId:user.id} });
+
         if(subscription) {
-            subscription = await subscription.update({text_notification, email_notification, twelve_hours, one_hour,})
+            subscription = await subscription.update({text_notification, email_notification, twelve_hours, one_hour})
         } else {
             subscription = await Subscription.create( {text_notification, email_notification, twelve_hours, one_hour, userId:user.id});
         }
@@ -122,3 +122,43 @@ exports.deleteCouponCodes = async(req, res) => {
         return res.status(500).send({ message: error.message})
     }
 }
+
+exports.activateSubscriptionByCouponCode = async(req, res) => {
+    try {
+        let { code, userId } = req.body;
+        let couponcode = await CuoponCode.findOne({ where: { code, is_active:true }});
+
+        if(couponcode) {
+            // check expiry data
+            if(new Date(couponcode.expires_on).valueOf() < new Date().valueOf() ) {
+                await couponcode.update({ is_active:false })
+                return res.status(500).send({error:"Code has expired "});
+            }
+
+            
+
+            // update subscription
+            let user_subscription = await Subscription.findOne({ where: { userId }});
+            let currentDate = new Date().getDate();
+            let expiryDate = new Date().setDate(currentDate + 30)
+
+            let subscription = await user_subscription.update({
+                is_active:true, 
+                subscription_date:new Date().toISOString(), 
+                expires_on:new Date(expiryDate).toISOString(),
+            });
+
+            await couponcode.update({ is_active:false });
+
+            return res.status(200).send({ couponcode, subscription });
+        } else {
+            return res.status(500).send({"error":"Promo Code is not active"});
+        }
+        
+    } catch (error) {
+        return res.status(500).send({ message: error.message})
+    }
+}
+
+// pass promo code
+// update subscription info

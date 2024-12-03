@@ -79,6 +79,11 @@ const couponcodeValidator = {
     }
 }
 
+const validateCouponCode = check('code')
+.trim()
+.isLength({ max: 5  })
+.withMessage('Coupon must be 5 characters')
+
 const validate = validations => {
     return async (req, res, next) => {
         await Promise.all(validations.map(validation => validation.run(req)));
@@ -95,4 +100,4 @@ const validate = validations => {
 };
 
 
-module.exports = { registrationSchema, validate, validateConfirmPassword, couponcodeValidator};
+module.exports = { registrationSchema, validate, validateConfirmPassword, couponcodeValidator, validateCouponCode};

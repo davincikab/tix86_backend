@@ -32,7 +32,7 @@ const authenticate = async (req, res, next) => {
         next();
     } catch (error) {
         // console.log("Error");
-        // console.log(error.message);
+        console.log(error.message);
         // if (!refreshToken) {
         //     return res.status(401).send('Access Denied. No refresh token provided.');
         // }
